@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { extractText } from "unpdf";
 import { GoogleGenAI } from "@google/genai";
-
+import { prisma } from "@/lib/prisma";
 const ai = new GoogleGenAI({});
-function cosineSimilarity(
-  a: number[],
-  b: number[]
-) {
+function cosineSimilarity(a: number[], b: number[]) {
   let dotProduct = 0;
   let normA = 0;
   let normB = 0;
@@ -17,8 +14,7 @@ function cosineSimilarity(
     normB += b[i] * b[i];
   }
 
-  return dotProduct /
-    (Math.sqrt(normA) * Math.sqrt(normB));
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 export async function POST(req: Request) {
@@ -44,8 +40,22 @@ export async function POST(req: Request) {
     const fullText = data.text.join(" ");
 
     const chunks = chunkText(fullText);
+    const documentId = crypto.randomUUID();
 
+    for (let i = 0; i < chunks.length; i++) {
+      await prisma.documentChunk.create({
+        data: {
+          documentId,
+          chunkIndex: i,
+          text: chunks[i],
+        },
+      });
+    }
+    const savedChunks = await prisma.documentChunk.findMany();
 
+    console.log(savedChunks.length);
+
+    
     const embeddedChunks = await Promise.all(
       chunks.map(async (chunk) => {
         const response = await ai.models.embedContent({
@@ -59,43 +69,33 @@ export async function POST(req: Request) {
         };
       }),
     );
-    const question =
-  "What databases does Devansh know?";
+    const question = "What databases does Devansh know?";
 
-const questionResponse =
-  await ai.models.embedContent({
-    model: "gemini-embedding-2",
-    contents: question,
-    config: {
-      taskType: "SEMANTIC_SIMILARITY",
-    },
-  });
+    const questionResponse = await ai.models.embedContent({
+      model: "gemini-embedding-2",
+      contents: question,
+      config: {
+        taskType: "SEMANTIC_SIMILARITY",
+      },
+    });
 
-const questionEmbedding =
-  questionResponse.embeddings?.[0]?.values;
+    const questionEmbedding = questionResponse.embeddings?.[0]?.values;
 
-if (!questionEmbedding) {
-  throw new Error("No question embedding");
-}
-const scores = embeddedChunks.map(
-  (chunk) => ({
-    text: chunk.text,
-    score: cosineSimilarity(
-      questionEmbedding,
-      chunk.embedding!
-    ),
-  })
-);
-scores.sort(
-  (a, b) => b.score - a.score
-);
+    if (!questionEmbedding) {
+      throw new Error("No question embedding");
+    }
+    const scores = embeddedChunks.map((chunk) => ({
+      text: chunk.text,
+      score: cosineSimilarity(questionEmbedding, chunk.embedding!),
+    }));
+    scores.sort((a, b) => b.score - a.score);
 
-const context = scores
-  .slice(0, 3)
-  .map(item => item.text)
-  .join("\n\n");
+    const context = scores
+      .slice(0, 3)
+      .map((item) => item.text)
+      .join("\n\n");
 
-const prompt = `
+    const prompt = `
 Answer the question using only the provided context.
 
 Context:
@@ -104,18 +104,18 @@ ${context}
 Question:
 ${question}
 `;
-const answer = await ai.models.generateContent({
-  model: "gemini-2.5-flash",
-  contents: prompt,
-});
+    const answer = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
 
-console.log(answer.text);
-// console.log("Best Match:");
+    console.log(answer.text);
+    // console.log("Best Match:");
 
-// console.log(scores[0].score);
-// console.log(scores.slice(0, 3));
+    // console.log(scores[0].score);
+    // console.log(scores.slice(0, 3));
 
-// console.log(scores[0].text);
+    // console.log(scores[0].text);
     // c
     // onsole.log(chunks.length);
     // console.log(chunks[0].length);
