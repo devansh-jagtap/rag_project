@@ -2,60 +2,48 @@ import { NextResponse } from "next/server";
 import { extractText } from "unpdf";
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
-const ai = new GoogleGenAI({});
-function cosineSimilarity(a: number[], b: number[]) {
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
 
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+const ai = new GoogleGenAI({});
+// function cosineSimilarity(a: number[], b: number[]) {
+//   let dotProduct = 0;
+//   let normA = 0;
+//   let normB = 0;
+
+//   for (let i = 0; i < a.length; i++) {
+//     dotProduct += a[i] * b[i];
+//     normA += a[i] * a[i];
+//     normB += b[i] * b[i];
+//   }
+
+//   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+// }
+function chunkText(text: string, chunkSize = 500, overlap = 100) {
+  const chunks = [];
+
+  for (let i = 0; i < text.length; i += chunkSize - overlap) {
+    chunks.push(text.slice(i, i + chunkSize));
   }
 
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  return chunks;
 }
 
 export async function POST(req: Request) {
   try {
+    // FORM DATA -> GET PDF
     const formData = await req.formData();
-
     const file = formData.get("pdf") as File;
-
     const arrayBuffer = await file.arrayBuffer();
-
     const uint8Array = new Uint8Array(arrayBuffer);
 
+    // EXTRACT TEXT
     const data = await extractText(uint8Array);
-    function chunkText(text: string, chunkSize = 500, overlap = 100) {
-      const chunks = [];
-
-      for (let i = 0; i < text.length; i += chunkSize - overlap) {
-        chunks.push(text.slice(i, i + chunkSize));
-      }
-
-      return chunks;
-    }
     const fullText = data.text.join(" ");
 
+    // CHUNK TEXT
     const chunks = chunkText(fullText);
-    const documentId = crypto.randomUUID();
+    console.log("Chunks:", chunks.length);
 
-    for (let i = 0; i < chunks.length; i++) {
-      await prisma.documentChunk.create({
-        data: {
-          documentId,
-          chunkIndex: i,
-          text: chunks[i],
-        },
-      });
-    }
-    const savedChunks = await prisma.documentChunk.findMany();
-
-    console.log(savedChunks.length);
-
-    
+    // EMBEDDINGS
     const embeddedChunks = await Promise.all(
       chunks.map(async (chunk) => {
         const response = await ai.models.embedContent({
@@ -69,80 +57,81 @@ export async function POST(req: Request) {
         };
       }),
     );
-    const question = "What databases does Devansh know?";
+    console.log("Embedding Length:", embeddedChunks[0].embedding?.length);
 
-    const questionResponse = await ai.models.embedContent({
-      model: "gemini-embedding-2",
-      contents: question,
-      config: {
-        taskType: "SEMANTIC_SIMILARITY",
-      },
-    });
+    console.log(typeof embeddedChunks[0].embedding);
 
-    const questionEmbedding = questionResponse.embeddings?.[0]?.values;
+    console.log(embeddedChunks[0].embedding?.length);
 
-    if (!questionEmbedding) {
-      throw new Error("No question embedding");
+    console.log(embeddedChunks[0]);
+    // SAVE TO DATABASE
+    const documentId = crypto.randomUUID();
+
+    for (let i = 0; i < chunks.length; i++) {
+      await prisma.documentChunk.create({
+        data: {
+          documentId,
+          chunkIndex: i,
+          text: embeddedChunks[i].text,
+          embedding: embeddedChunks[i].embedding,
+        },
+      });
     }
-    const scores = embeddedChunks.map((chunk) => ({
-      text: chunk.text,
-      score: cosineSimilarity(questionEmbedding, chunk.embedding!),
-    }));
-    scores.sort((a, b) => b.score - a.score);
+    const savedChunks = await prisma.documentChunk.findMany();
 
-    const context = scores
-      .slice(0, 3)
-      .map((item) => item.text)
-      .join("\n\n");
+    console.log(savedChunks.length);
 
-    const prompt = `
-Answer the question using only the provided context.
+   
 
-Context:
-${context}
+    // QUESTIONS EMBEDDING
 
-Question:
-${question}
-`;
-    const answer = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    // const question = "What databases does Devansh know?";
 
-    console.log(answer.text);
-    // console.log("Best Match:");
+    // const questionResponse = await ai.models.embedContent({
+    //   model: "gemini-embedding-2",
+    //   contents: question,
+    //   config: {
+    //     taskType: "SEMANTIC_SIMILARITY",
+    //   },
+    // });
 
-    // console.log(scores[0].score);
-    // console.log(scores.slice(0, 3));
+    // const questionEmbedding = questionResponse.embeddings?.[0]?.values;
 
-    // console.log(scores[0].text);
-    // c
-    // onsole.log(chunks.length);
-    // console.log(chunks[0].length);
-    // console.log(chunks[1].length);
-    // console.log("Total chunks:", embeddedChunks.length);
-
-    // console.log(embeddedChunks[0].embedding?.length);
-
-    // console.log(response.embeddings);
-    // console.log(response);
-
-    // if (!response.embeddings?.length) {
-    //   throw new Error("No embeddings returned");
+    // if (!questionEmbedding) {
+    //   throw new Error("No question embedding");
     // }
 
-    // console.log(response.embeddings.length);
+//     // SIMILARITY SEARCH
+//     const scores = embeddedChunks.map((chunk) => ({
+//       text: chunk.text,
+//       score: cosineSimilarity(questionEmbedding, chunk.embedding!),
+//     }));
+//     scores.sort((a, b) => b.score - a.score);
 
-    // console.log(response.embeddings[0]?.values?.length);
+//     console.log("Top Score:", scores[0].score);
 
-    // console.log(response.embeddings[0]?.values?.slice(0, 10));
-    // console.log("Chunks:", chunks.length);
-    // console.log(chunks.length);
-    // console.log(chunks.slice(0, 5));
-    // console.log(chunks[0]);
-    // console.log(chunks[1]);
-    // console.log(data);
-    // console.log("Text extracted");
+//     // Build Context
+//     const context = scores
+//       .slice(0, 3)
+//       .map((item) => item.text)
+//       .join("\n\n");
+
+//     // Generate Answer
+//     const prompt = `
+// Answer the question using only the provided context.
+
+// Context:
+// ${context}
+
+// Question:
+// ${question}
+// `;
+//     const answer = await ai.models.generateContent({
+//       model: "gemini-2.5-flash",
+//       contents: prompt,
+//     });
+
+//     console.log(answer.text);
 
     return NextResponse.json({
       success: true,

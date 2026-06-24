@@ -17,5 +17,6 @@ model DocumentChunk {
   documentId   String
   chunkIndex   Int
   text         String
+  embedding   Json?
   createdAt    DateTime @default(now())
 }
