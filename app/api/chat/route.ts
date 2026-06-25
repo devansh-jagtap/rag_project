@@ -44,9 +44,12 @@ export async function POST(req: Request) {
       }));
     scores.sort((a, b) => b.score - a.score);
 
-    console.log("Top Score:", scores[0]?.score);
-    console.log("second Score:", scores[1]?.score);
-    console.log("third Score:", scores[2]?.score);
+   scores.slice(0, 5).forEach((item, index) => {
+  console.log("----------------");
+  console.log(index + 1);
+  console.log(item.score);
+  console.log(item.text);
+});
 
     // Build Context
     const context = scores
