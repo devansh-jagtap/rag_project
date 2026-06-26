@@ -65,8 +65,14 @@ export async function POST(req: Request) {
 
     console.log(embeddedChunks[0]);
     // SAVE TO DATABASE
-    const documentId = crypto.randomUUID();
+    // const documentId = crypto.randomUUID();
 
+    const document = await prisma.document.create({
+      data: {
+        title: file.name,
+      },
+    });
+    const documentId = document.id;
     for (let i = 0; i < chunks.length; i++) {
       await prisma.documentChunk.create({
         data: {
@@ -80,8 +86,6 @@ export async function POST(req: Request) {
     const savedChunks = await prisma.documentChunk.findMany();
 
     console.log(savedChunks.length);
-
-   
 
     // QUESTIONS EMBEDDING
 
@@ -101,41 +105,41 @@ export async function POST(req: Request) {
     //   throw new Error("No question embedding");
     // }
 
-//     // SIMILARITY SEARCH
-//     const scores = embeddedChunks.map((chunk) => ({
-//       text: chunk.text,
-//       score: cosineSimilarity(questionEmbedding, chunk.embedding!),
-//     }));
-//     scores.sort((a, b) => b.score - a.score);
+    //     // SIMILARITY SEARCH
+    //     const scores = embeddedChunks.map((chunk) => ({
+    //       text: chunk.text,
+    //       score: cosineSimilarity(questionEmbedding, chunk.embedding!),
+    //     }));
+    //     scores.sort((a, b) => b.score - a.score);
 
-//     console.log("Top Score:", scores[0].score);
+    //     console.log("Top Score:", scores[0].score);
 
-//     // Build Context
-//     const context = scores
-//       .slice(0, 3)
-//       .map((item) => item.text)
-//       .join("\n\n");
+    //     // Build Context
+    //     const context = scores
+    //       .slice(0, 3)
+    //       .map((item) => item.text)
+    //       .join("\n\n");
 
-//     // Generate Answer
-//     const prompt = `
-// Answer the question using only the provided context.
+    //     // Generate Answer
+    //     const prompt = `
+    // Answer the question using only the provided context.
 
-// Context:
-// ${context}
+    // Context:
+    // ${context}
 
-// Question:
-// ${question}
-// `;
-//     const answer = await ai.models.generateContent({
-//       model: "gemini-2.5-flash",
-//       contents: prompt,
-//     });
+    // Question:
+    // ${question}
+    // `;
+    //     const answer = await ai.models.generateContent({
+    //       model: "gemini-2.5-flash",
+    //       contents: prompt,
+    //     });
 
-//     console.log(answer.text);
+    //     console.log(answer.text);
 
     return NextResponse.json({
       success: true,
-      text: data.text,
+      documentId,
     });
   } catch (error) {
     console.error("ERROR:", error);

@@ -11,12 +11,21 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now())
 
+  chunks    DocumentChunk[]
+}
 model DocumentChunk {
-  id           String @id @default(uuid())
-  documentId   String
-  chunkIndex   Int
-  text         String
+  id          String   @id @default(uuid())
+
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id])
+
+  chunkIndex  Int
+  text        String
   embedding   Json?
-  createdAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
 }
