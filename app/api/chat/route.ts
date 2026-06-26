@@ -17,9 +17,13 @@ function cosineSimilarity(a: number[], b: number[]) {
 }
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json();
+    // const { message } = await req.json();
+
+    // console.log(message);
+    const { message, documentId } = await req.json();
 
     console.log(message);
+    console.log(documentId);
     const questionResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
       contents: message,
@@ -33,7 +37,11 @@ export async function POST(req: Request) {
     if (!questionEmbedding) {
       throw new Error("No question embedding");
     }
-    const chunks = await prisma.documentChunk.findMany();
+    const chunks = await prisma.documentChunk.findMany({
+      where: {
+        documentId,
+      },
+    });
 
     // SIMILARITY SEARCH
     const scores = chunks
@@ -44,12 +52,12 @@ export async function POST(req: Request) {
       }));
     scores.sort((a, b) => b.score - a.score);
 
-   scores.slice(0, 5).forEach((item, index) => {
-  console.log("----------------");
-  console.log(index + 1);
-  console.log(item.score);
-  console.log(item.text);
-});
+    scores.slice(0, 5).forEach((item, index) => {
+      console.log("----------------");
+      console.log(index + 1);
+      console.log(item.score);
+      console.log(item.text);
+    });
 
     // Build Context
     const context = scores

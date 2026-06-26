@@ -5,6 +5,7 @@ import Questions from "./components/questions";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
+  const [documentId, setDocumentId] = useState("");
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -22,10 +23,16 @@ export default function Home() {
     });
     console.log("Status:", response.status);
 
-    const text = await response.text();
+    // const text = await response.text();
 
-    console.log(text);
+    // console.log(text);
+    const data = await response.json();
+
+    console.log(data);
+
+    setDocumentId(data.documentId);
     console.log(response);
+    console.log(data.documentId);
     //      if (!file) return;
 
     //   const arrayBuffer = await file.arrayBuffer();
@@ -71,8 +78,9 @@ export default function Home() {
 
       {/* Questions Section */}
       <div className="w-full max-w-xl flex flex-col items-center">
-        <Questions />
+        <Questions documentId={documentId} />
       </div>
+      
     </div>
   );
 }

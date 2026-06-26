@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+type QuestionsProps = {
+  documentId: string;
+};
 
-export default function Questions() {
+export default function Questions({documentId} : QuestionsProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
 
@@ -14,6 +17,7 @@ export default function Questions() {
       },
       body: JSON.stringify({
         message: question,
+        documentId,
       }),
     });
 
