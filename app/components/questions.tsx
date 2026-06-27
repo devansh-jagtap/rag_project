@@ -5,11 +5,24 @@ type QuestionsProps = {
   chatId: string;
 };
 
-export default function Questions({chatId} : QuestionsProps) {
+export default function Questions({ chatId }: QuestionsProps) {
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [messages, setMessages] = useState<
+    {
+      role: "user" | "assistant";
+      content: string;
+    }[]
+  >([]);
 
   async function askQuestion() {
+    if (!question.trim()) return;
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: question,
+      },
+    ]);
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
@@ -24,8 +37,14 @@ export default function Questions({chatId} : QuestionsProps) {
     const data = await response.json();
 
     console.log(data);
-
-    setAnswer(data.answer);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: data.answer,
+      },
+    ]);
+    setQuestion("");
   }
 
   return (
@@ -49,14 +68,33 @@ export default function Questions({chatId} : QuestionsProps) {
       </div>
 
       {/* Answer Section (Only shows if there is an answer) */}
-      {answer && (
-        <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800/60 shadow-md w-full">
-          <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-2">
-            Answer
-          </h2>
-          <p className="text-zinc-200 leading-relaxed text-sm">{answer}</p>
+
+      <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800/60 shadow-md w-full">
+        <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+          Chat
+        </h2>
+
+        <div className="space-y-6">
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={message.role === "user" ? "text-right" : "text-left"}
+            >
+              <p className="text-xs text-zinc-500 mb-1">
+                {message.role === "user" ? "You" : "AI"}
+              </p>
+
+              <div
+                className={`inline-block rounded-xl px-4 py-3 max-w-[80%] ${
+                  message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+                }`}
+              >
+                {message.content}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

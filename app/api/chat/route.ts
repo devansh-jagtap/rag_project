@@ -1,8 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
 import { ragPrompt } from "@/lib/prompt";
+import { prisma } from "@/lib/prisma";
 const ai = new GoogleGenAI({});
+export async function GET() {
+  const chats = await prisma.chat.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
+  return Response.json(chats);
+}
 export async function POST(req: Request) {
   try {
     const { message, chatId } = await req.json();
