@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({});
 
 export async function POST(req: Request) {
   try {
-    const { message, documentId } = await req.json();
+    const { message, chatId } = await req.json();
 
     // Embed Question
     const questionResponse = await ai.models.embedContent({
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       includeMetadata: true,
       filter: {
         documentId: {
-          $eq: documentId,
+          $eq: chatId,
         },
       },
     });

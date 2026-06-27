@@ -5,18 +5,33 @@ import Questions from "./components/questions";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
-  const [documentId, setDocumentId] = useState("");
+  // const [documentId, setDocumentId] = useState("");
+  const [chatId, setChatId] = useState("");
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
   };
   const handleClick = async () => {
+    
     if (!file) return;
     const formData = new FormData();
 
     formData.append("pdf", file);
+   let currentChatId = chatId;
 
+    if (!currentChatId) {
+      const response = await fetch("/api/chat/create", {
+        method: "POST",
+      });
+
+      const chat = await response.json();
+
+      currentChatId = chat.id;
+
+      setChatId(chat.id);
+    }
+    formData.append("chatId", currentChatId);
     const response = await fetch("/api/upload", {
       method: "POST",
       body: formData,
@@ -30,9 +45,10 @@ export default function Home() {
 
     console.log(data);
 
-    setDocumentId(data.documentId);
-    console.log(response);
-    console.log(data.documentId);
+    // setDocumentId(data.documentId);
+    // console.log(response);
+    // console.log(data.documentId);
+ 
     //      if (!file) return;
 
     //   const arrayBuffer = await file.arrayBuffer();
@@ -78,9 +94,8 @@ export default function Home() {
 
       {/* Questions Section */}
       <div className="w-full max-w-xl flex flex-col items-center">
-        <Questions documentId={documentId} />
+        <Questions chatId={chatId} />
       </div>
-      
     </div>
   );
 }

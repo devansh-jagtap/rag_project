@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     const data = await extractText(uint8Array);
     const fullText = data.text.join(" ");
 
+    const chatId = formData.get("chatId") as string;
     // CHUNK
     // const chunks = chunkText(fullText);
 
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
     const document = await prisma.document.create({
       data: {
         title: file.name,
+        chatId,
       },
     });
 
@@ -86,6 +88,7 @@ export async function POST(req: Request) {
       id: `${documentId}-${i}`,
       values: chunk.embedding,
       metadata: {
+        chatId,
         documentId,
         title: file.name,
         chunkIndex: i,

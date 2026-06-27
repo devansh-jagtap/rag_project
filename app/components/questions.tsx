@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 type QuestionsProps = {
-  documentId: string;
+  chatId: string;
 };
 
-export default function Questions({documentId} : QuestionsProps) {
+export default function Questions({chatId} : QuestionsProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
 
@@ -17,7 +17,7 @@ export default function Questions({documentId} : QuestionsProps) {
       },
       body: JSON.stringify({
         message: question,
-        documentId,
+        chatId,
       }),
     });
 

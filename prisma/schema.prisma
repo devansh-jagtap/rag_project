@@ -16,16 +16,14 @@ model Document {
   title     String
   createdAt DateTime @default(now())
 
-  chunks    DocumentChunk[]
+  chatId String
+  chat   Chat @relation(fields: [chatId], references: [id])
 }
-model DocumentChunk {
-  id          String   @id @default(uuid())
 
-  documentId  String
-  document    Document @relation(fields: [documentId], references: [id])
+model Chat{
+  id        String   @id @default(uuid())
+  title     String
+  createdAt DateTime @default(now())
 
-  chunkIndex  Int
-  text        String
-  embedding   Json?
-  createdAt   DateTime @default(now())
+  documents Document[]
 }
