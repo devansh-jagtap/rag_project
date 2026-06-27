@@ -27,3 +27,13 @@ model Chat{
 
   documents Document[]
 }
+model Message {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+
+  chatId    String
+  chat      Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
