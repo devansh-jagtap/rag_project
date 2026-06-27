@@ -1,44 +1,33 @@
 import { NextResponse } from "next/server";
 import { extractText } from "unpdf";
 import { GoogleGenAI } from "@google/genai";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+
 import { prisma } from "@/lib/prisma";
 import { index } from "@/lib/pinecone";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const ai = new GoogleGenAI({});
 
-// function chunkText(
-//   text: string,
-//   chunkSize = 500,
-//   overlap = 100
-// ) {
-//   const chunks = [];
-
-//   for (let i = 0; i < text.length; i += chunkSize - overlap) {
-//     chunks.push(text.slice(i, i + chunkSize));
-//   }
-
-//   return chunks;
-// }
-
 export async function POST(req: Request) {
   try {
-    // GET PDF
     const formData = await req.formData();
+
     const file = formData.get("pdf") as File;
+    const chatId = formData.get("chatId") as string;
+
+    if (!file || !chatId) {
+      return NextResponse.json(
+        { success: false, error: "Missing file or chatId" },
+        { status: 400 }
+      );
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    // EXTRACT TEXT
     const data = await extractText(uint8Array);
     const fullText = data.text.join(" ");
 
-    const chatId = formData.get("chatId") as string;
-    // CHUNK
-    // const chunks = chunkText(fullText);
-
-    // console.log("Chunks:", chunks.length);
     const splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 800,
       chunkOverlap: 150,
@@ -46,9 +35,6 @@ export async function POST(req: Request) {
 
     const splitDocs = await splitter.createDocuments([fullText]);
 
-    console.log("Chunks:", splitDocs.length);
-    console.log(splitDocs[0].pageContent);
-    // CREATE DOCUMENT
     const document = await prisma.document.create({
       data: {
         title: file.name,
@@ -58,7 +44,6 @@ export async function POST(req: Request) {
 
     const documentId = document.id;
 
-    // CREATE EMBEDDINGS
     const embeddedChunks = await Promise.all(
       splitDocs.map(async (doc) => {
         const response = await ai.models.embedContent({
@@ -80,10 +65,9 @@ export async function POST(req: Request) {
           text: doc.pageContent,
           embedding,
         };
-      }),
+      })
     );
 
-    // CREATE PINECONE VECTORS
     const vectors = embeddedChunks.map((chunk, i) => ({
       id: `${documentId}-${i}`,
       values: chunk.embedding,
@@ -100,8 +84,6 @@ export async function POST(req: Request) {
       records: vectors,
     });
 
-    console.log("Uploaded to Pinecone");
-
     return NextResponse.json({
       success: true,
       documentId,
@@ -114,10 +96,134 @@ export async function POST(req: Request) {
         success: false,
         error: String(error),
       },
-      { status: 500 },
+      {
+        status: 500,
+      }
     );
   }
 }
+
+
+// import { NextResponse } from "next/server";
+// import { extractText } from "unpdf";
+// import { GoogleGenAI } from "@google/genai";
+// import { prisma } from "@/lib/prisma";
+// import { index } from "@/lib/pinecone";
+// import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+
+// const ai = new GoogleGenAI({});
+
+// function chunkText(
+//   text: string,
+//   chunkSize = 500,
+//   overlap = 100
+// ) {
+//   const chunks = [];
+
+//   for (let i = 0; i < text.length; i += chunkSize - overlap) {
+//     chunks.push(text.slice(i, i + chunkSize));
+//   }
+
+//   return chunks;
+// }
+
+// export async function POST(req: Request) {
+//   try {
+//     // GET PDF
+//     const formData = await req.formData();
+//     const file = formData.get("pdf") as File;
+
+//     const arrayBuffer = await file.arrayBuffer();
+//     const uint8Array = new Uint8Array(arrayBuffer);
+
+//     // EXTRACT TEXT
+//     const data = await extractText(uint8Array);
+//     const fullText = data.text.join(" ");
+
+//     const chatId = formData.get("chatId") as string;
+//     // CHUNK
+//     // const chunks = chunkText(fullText);
+
+//     // console.log("Chunks:", chunks.length);
+//     const splitter = new RecursiveCharacterTextSplitter({
+//       chunkSize: 800,
+//       chunkOverlap: 150,
+//     });
+
+//     const splitDocs = await splitter.createDocuments([fullText]);
+
+//     console.log("Chunks:", splitDocs.length);
+//     console.log(splitDocs[0].pageContent);
+//     // CREATE DOCUMENT
+//     const document = await prisma.document.create({
+//       data: {
+//         title: file.name,
+//         chatId,
+//       },
+//     });
+
+//     const documentId = document.id;
+
+//     // CREATE EMBEDDINGS
+//     const embeddedChunks = await Promise.all(
+//       splitDocs.map(async (doc) => {
+//         const response = await ai.models.embedContent({
+//           model: "gemini-embedding-2",
+//           contents: doc.pageContent,
+//           config: {
+//             taskType: "SEMANTIC_SIMILARITY",
+//             outputDimensionality: 1024,
+//           },
+//         });
+
+//         const embedding = response.embeddings?.[0]?.values;
+
+//         if (!embedding) {
+//           throw new Error("Embedding generation failed");
+//         }
+
+//         return {
+//           text: doc.pageContent,
+//           embedding,
+//         };
+//       }),
+//     );
+
+//     // CREATE PINECONE VECTORS
+//     const vectors = embeddedChunks.map((chunk, i) => ({
+//       id: `${documentId}-${i}`,
+//       values: chunk.embedding,
+//       metadata: {
+//         chatId,
+//         documentId,
+//         title: file.name,
+//         chunkIndex: i,
+//         text: chunk.text,
+//       },
+//     }));
+
+//     await index.namespace("documents").upsert({
+//       records: vectors,
+//     });
+
+//     console.log("Uploaded to Pinecone");
+
+//     return NextResponse.json({
+//       success: true,
+//       documentId,
+//     });
+//   } catch (error) {
+//     console.error(error);
+
+//     return NextResponse.json(
+//       {
+//         success: false,
+//         error: String(error),
+//       },
+//       { status: 500 },
+//     );
+//   }
+// }
 
 // import { NextResponse } from "next/server";
 // import { extractText } from "unpdf";

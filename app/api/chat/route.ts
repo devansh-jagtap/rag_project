@@ -2,7 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
 import { ragPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/prisma";
+
 const ai = new GoogleGenAI({});
+
 export async function GET() {
   const chats = await prisma.chat.findMany({
     orderBy: {
@@ -12,11 +14,11 @@ export async function GET() {
 
   return Response.json(chats);
 }
+
 export async function POST(req: Request) {
   try {
     const { message, chatId } = await req.json();
 
-    // Embed Question
     const questionResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
       contents: message,
@@ -26,19 +28,19 @@ export async function POST(req: Request) {
       },
     });
 
-    const questionEmbedding = questionResponse.embeddings?.[0]?.values;
+    const questionEmbedding =
+      questionResponse.embeddings?.[0]?.values;
 
     if (!questionEmbedding) {
       throw new Error("No question embedding");
     }
 
-    // Query Pinecone
     const results = await index.namespace("documents").query({
       vector: questionEmbedding,
       topK: 10,
       includeMetadata: true,
       filter: {
-        documentId: {
+        chatId: {
           $eq: chatId,
         },
       },
@@ -50,31 +52,14 @@ export async function POST(req: Request) {
       console.log("----------------");
       console.log(index + 1);
       console.log("Score:", match.score);
+      console.log(match.metadata?.title);
       console.log(match.metadata?.text);
     });
-    console.log(results.matches);
 
-    // Build Context
     const context = results.matches
       .map((match) => match.metadata?.text as string)
       .join("\n\n");
 
-    // Generate Answer
-    //     const prompt = `
-    // You are a PDF assistant.
-
-    // Answer ONLY using the provided context.
-
-    // If the answer is not present in the context, simply reply:
-
-    // "I couldn't find that information in the uploaded PDF."
-
-    // Context:
-    // ${context}
-
-    // Question:
-    // ${message}
-    // `;
     const prompt = await ragPrompt.format({
       context,
       question: message,
@@ -97,10 +82,128 @@ export async function POST(req: Request) {
         success: false,
         error: String(error),
       },
-      { status: 500 },
+      {
+        status: 500,
+      }
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+// import { GoogleGenAI } from "@google/genai";
+// import { index } from "@/lib/pinecone";
+// import { ragPrompt } from "@/lib/prompt";
+// import { prisma } from "@/lib/prisma";
+// const ai = new GoogleGenAI({});
+// export async function GET() {
+//   const chats = await prisma.chat.findMany({
+//     orderBy: {
+//       createdAt: "desc",
+//     },
+//   });
+
+//   return Response.json(chats);
+// }
+
+// export async function POST(req: Request) {
+//   try {
+//     const { message, chatId } = await req.json();
+
+    
+//     // Embed Question
+//     const questionResponse = await ai.models.embedContent({
+//       model: "gemini-embedding-2",
+//       contents: message,
+//       config: {
+//         taskType: "SEMANTIC_SIMILARITY",
+//         outputDimensionality: 1024,
+//       },
+//     });
+
+//     const questionEmbedding = questionResponse.embeddings?.[0]?.values;
+
+//     if (!questionEmbedding) {
+//       throw new Error("No question embedding");
+//     }
+
+//     // Query Pinecone
+//     const results = await index.namespace("documents").query({
+//       vector: questionEmbedding,
+//       topK: 10,
+//       includeMetadata: true,
+//       filter: {
+//         documentId: {
+//           $eq: chatId,
+//         },
+//       },
+//     });
+
+//     console.log("Matches");
+
+//     results.matches.forEach((match, index) => {
+//       console.log("----------------");
+//       console.log(index + 1);
+//       console.log("Score:", match.score);
+//       console.log(match.metadata?.text);
+//     });
+//     console.log(results.matches);
+
+//     // Build Context
+//     const context = results.matches
+//       .map((match) => match.metadata?.text as string)
+//       .join("\n\n");
+
+//     // Generate Answer
+//     //     const prompt = `
+//     // You are a PDF assistant.
+
+//     // Answer ONLY using the provided context.
+
+//     // If the answer is not present in the context, simply reply:
+
+//     // "I couldn't find that information in the uploaded PDF."
+
+//     // Context:
+//     // ${context}
+
+//     // Question:
+//     // ${message}
+//     // `;
+//     const prompt = await ragPrompt.format({
+//       context,
+//       question: message,
+//     });
+
+//     const answer = await ai.models.generateContent({
+//       model: "gemini-2.5-flash",
+//       contents: prompt,
+//     });
+
+//     return Response.json({
+//       success: true,
+//       answer: answer.text,
+//     });
+//   } catch (error) {
+//     console.error(error);
+
+//     return Response.json(
+//       {
+//         success: false,
+//         error: String(error),
+//       },
+//       { status: 500 },
+//     );
+//   }
+// }
 
 // import { GoogleGenAI } from "@google/genai";
 // import { prisma } from "@/lib/prisma";
