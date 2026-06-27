@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     // Query Pinecone
     const results = await index.namespace("documents").query({
       vector: questionEmbedding,
-      topK: 5,
+      topK: 10,
       includeMetadata: true,
       filter: {
         documentId: {
@@ -44,6 +44,14 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log("Matches");
+
+    results.matches.forEach((match, index) => {
+      console.log("----------------");
+      console.log(index + 1);
+      console.log("Score:", match.score);
+      console.log(match.metadata?.text);
+    });
     console.log(results.matches);
 
     // Build Context
