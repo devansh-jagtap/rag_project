@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
-
+import { ragPrompt } from "@/lib/prompt";
 const ai = new GoogleGenAI({});
 
 export async function POST(req: Request) {
@@ -17,15 +17,14 @@ export async function POST(req: Request) {
       },
     });
 
-    const questionEmbedding =
-      questionResponse.embeddings?.[0]?.values;
+    const questionEmbedding = questionResponse.embeddings?.[0]?.values;
 
     if (!questionEmbedding) {
       throw new Error("No question embedding");
     }
 
     // Query Pinecone
-    const results = await index.query({
+    const results = await index.namespace("documents").query({
       vector: questionEmbedding,
       topK: 5,
       includeMetadata: true,
@@ -44,21 +43,25 @@ export async function POST(req: Request) {
       .join("\n\n");
 
     // Generate Answer
-    const prompt = `
-You are a PDF assistant.
+    //     const prompt = `
+    // You are a PDF assistant.
 
-Answer ONLY using the provided context.
+    // Answer ONLY using the provided context.
 
-If the answer is not present in the context, simply reply:
+    // If the answer is not present in the context, simply reply:
 
-"I couldn't find that information in the uploaded PDF."
+    // "I couldn't find that information in the uploaded PDF."
 
-Context:
-${context}
+    // Context:
+    // ${context}
 
-Question:
-${message}
-`;
+    // Question:
+    // ${message}
+    // `;
+    const prompt = await ragPrompt.format({
+      context,
+      question: message,
+    });
 
     const answer = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -77,13 +80,10 @@ ${message}
         success: false,
         error: String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
-
-
 
 // import { GoogleGenAI } from "@google/genai";
 // import { prisma } from "@/lib/prisma";
@@ -155,7 +155,7 @@ ${message}
 
 //     // Generate Answer
 //     const prompt = `
-// Answer the question using the provided context. 
+// Answer the question using the provided context.
 // and write short and better answers as you are assistant
 
 // Context:
