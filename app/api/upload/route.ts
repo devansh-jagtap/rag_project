@@ -3,22 +3,23 @@ import { extractText } from "unpdf";
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 import { index } from "@/lib/pinecone";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 const ai = new GoogleGenAI({});
 
-function chunkText(
-  text: string,
-  chunkSize = 500,
-  overlap = 100
-) {
-  const chunks = [];
+// function chunkText(
+//   text: string,
+//   chunkSize = 500,
+//   overlap = 100
+// ) {
+//   const chunks = [];
 
-  for (let i = 0; i < text.length; i += chunkSize - overlap) {
-    chunks.push(text.slice(i, i + chunkSize));
-  }
+//   for (let i = 0; i < text.length; i += chunkSize - overlap) {
+//     chunks.push(text.slice(i, i + chunkSize));
+//   }
 
-  return chunks;
-}
+//   return chunks;
+// }
 
 export async function POST(req: Request) {
   try {
@@ -34,10 +35,18 @@ export async function POST(req: Request) {
     const fullText = data.text.join(" ");
 
     // CHUNK
-    const chunks = chunkText(fullText);
+    // const chunks = chunkText(fullText);
 
-    console.log("Chunks:", chunks.length);
+    // console.log("Chunks:", chunks.length);
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 800,
+      chunkOverlap: 150,
+    });
 
+    const splitDocs = await splitter.createDocuments([fullText]);
+
+    console.log("Chunks:", splitDocs.length);
+    console.log(splitDocs[0].pageContent);
     // CREATE DOCUMENT
     const document = await prisma.document.create({
       data: {
@@ -49,21 +58,27 @@ export async function POST(req: Request) {
 
     // CREATE EMBEDDINGS
     const embeddedChunks = await Promise.all(
-      chunks.map(async (chunk) => {
+      splitDocs.map(async (doc) => {
         const response = await ai.models.embedContent({
           model: "gemini-embedding-2",
-          contents: chunk,
+          contents: doc.pageContent,
           config: {
             taskType: "SEMANTIC_SIMILARITY",
             outputDimensionality: 1024,
           },
         });
 
+        const embedding = response.embeddings?.[0]?.values;
+
+        if (!embedding) {
+          throw new Error("Embedding generation failed");
+        }
+
         return {
-          text: chunk,
-          embedding: response.embeddings?.[0]?.values ?? [],
+          text: doc.pageContent,
+          embedding,
         };
-      })
+      }),
     );
 
     // CREATE PINECONE VECTORS
@@ -72,12 +87,13 @@ export async function POST(req: Request) {
       values: chunk.embedding,
       metadata: {
         documentId,
+        title: file.name,
         chunkIndex: i,
         text: chunk.text,
       },
     }));
 
-    await index.upsert({
+    await index.namespace("documents").upsert({
       records: vectors,
     });
 
@@ -95,12 +111,10 @@ export async function POST(req: Request) {
         success: false,
         error: String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
-
 
 // import { NextResponse } from "next/server";
 // import { extractText } from "unpdf";
