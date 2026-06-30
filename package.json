@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.4",
+    "@ai-sdk/google": "^4.0.2",
+    "@ai-sdk/react": "^4.0.5",
     "@google/genai": "^2.9.0",
     "@langchain/core": "^1.2.1",
     "@langchain/pinecone": "^1.0.3",
@@ -16,6 +19,7 @@
     "@pinecone-database/pinecone": "^8.0.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "ai": "^7.0.4",
     "langchain": "^1.5.2",
     "next": "16.2.9",
     "pdfjs-dist": "^6.0.227",
@@ -24,7 +28,8 @@
     "rag_nextjs": ".",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "unpdf": "^1.6.2"
+    "unpdf": "^1.6.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

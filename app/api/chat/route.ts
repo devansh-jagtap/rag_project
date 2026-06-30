@@ -2,6 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
 import { ragPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/prisma";
+import { streamText } from "ai";
+import { chatModel } from "@/lib/ai";
 
 const ai = new GoogleGenAI({});
 
@@ -28,8 +30,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const questionEmbedding =
-      questionResponse.embeddings?.[0]?.values;
+    const questionEmbedding = questionResponse.embeddings?.[0]?.values;
 
     if (!questionEmbedding) {
       throw new Error("No question embedding");
@@ -65,15 +66,21 @@ export async function POST(req: Request) {
       question: message,
     });
 
-    const answer = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    // const answer = await ai.models.generateContent({
+    //   model: "gemini-2.5-flash",
+    //   contents: prompt,
+    // });
+
+    // return Response.json({
+    //   success: true,
+    //   answer: answer.text,
+    // });
+    const result = streamText({
+      model: chatModel,
+      prompt,
     });
 
-    return Response.json({
-      success: true,
-      answer: answer.text,
-    });
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error(error);
 
@@ -84,20 +91,10 @@ export async function POST(req: Request) {
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 // import { GoogleGenAI } from "@google/genai";
 // import { index } from "@/lib/pinecone";
@@ -118,7 +115,6 @@ export async function POST(req: Request) {
 //   try {
 //     const { message, chatId } = await req.json();
 
-    
 //     // Embed Question
 //     const questionResponse = await ai.models.embedContent({
 //       model: "gemini-embedding-2",
