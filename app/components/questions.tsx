@@ -1,86 +1,135 @@
 "use client";
 
-import { useState } from "react";
-import { useChat } from "@ai-sdk/react";
+import { useEffect, useState } from "react";
 
 type QuestionsProps = {
   chatId: string;
 };
 
-export default function Questions({ chatId }: QuestionsProps) {
-  const [input, setInput] = useState("");
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
 
-  const { messages, sendMessage, status } = useChat({
-    api: "/api/chat",
-    body: {
-      chatId,
-    },
-  });
+export default function Questions({ chatId }: QuestionsProps) {
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 1. Load messages from the database
+  async function loadMessages() {
+    if (!chatId) return;
+
+    try {
+      const res = await fetch(`/api/chat/${chatId}/messages`);
+      const data = await res.json();
+      setMessages(data);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+    }
+  }
+
+  // 2. Trigger message reload when chatId changes
+  useEffect(() => {
+    loadMessages();
+  }, [chatId]);
+
+  // 3. Handle sending a question
+  async function askQuestion() {
+    if (!question.trim() || !chatId || loading) return;
+
+    const userQuestion = question;
+
+    setQuestion("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userQuestion,
+          chatId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data);
+        return;
+      }
+
+      // Reload entire conversation from database to maintain synchronized state
+      await loadMessages();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* Input */}
-      <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
-        <form
-          className="flex gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-
-            if (!input.trim()) return;
-
-            sendMessage(
-              {
-                text: input,
-              },
-              {
-                body: {
-                  chatId,
-                },
-              }
-            );
-
-            setInput("");
+      {/* Input Bar Section */}
+      <div className="flex gap-4 bg-zinc-900 p-6 rounded-xl border border-zinc-800 shadow-lg w-full">
+        <input
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              askQuestion();
+            }
           }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask something..."
-            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-4 py-2"
-          />
+          placeholder="Ask something..."
+          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-4 py-3 text-zinc-200 outline-none focus:border-blue-500 transition-colors placeholder-zinc-500"
+        />
 
-          <button
-            type="submit"
-            disabled={status === "streaming"}
-            className="bg-blue-600 hover:bg-blue-500 rounded-md px-6"
-          >
-            {status === "streaming" ? "Thinking..." : "Ask"}
-          </button>
-        </form>
+        <button
+          onClick={askQuestion}
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-medium px-6 rounded-md transition-colors shrink-0 dashboard-btn"
+        >
+          {loading ? "Thinking..." : "Ask"}
+        </button>
       </div>
 
-      {/* Chat */}
-      <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800">
+      {/* Chat History Display Section */}
+      <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 shadow-md w-full">
+        <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+          Chat
+        </h2>
+
         <div className="space-y-6">
-          {messages.map((message) => (
-            <div key={message.id}>
-              <div className="font-semibold mb-1">
-                {message.role === "user" ? "You" : "AI"}
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={
+                message.role === "user" ? "flex justify-end" : "flex justify-start"
+              }
+            >
+              <div
+                className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                  message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+                }`}
+              >
+                <p className="text-xs opacity-70 mb-2">
+                  {message.role === "user" ? "You" : "AI"}
+                </p>
+
+                <p className="whitespace-pre-wrap text-zinc-100">{message.content}</p>
               </div>
-
-              {message.parts.map((part, index) => {
-                if (part.type === "text") {
-                  return (
-                    <p key={index} className="whitespace-pre-wrap">
-                      {part.text}
-                    </p>
-                  );
-                }
-
-                return null;
-              })}
             </div>
           ))}
+
+          {messages.length === 0 && (
+            <p className="text-zinc-500 text-center py-4">
+              Start a conversation...
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -88,102 +137,164 @@ export default function Questions({ chatId }: QuestionsProps) {
 }
 
 // "use client";
-// import { useChat } from "@ai-sdk/react";
+
+// import { useEffect, useState } from "react";
+
 // type QuestionsProps = {
 //   chatId: string;
 // };
 
+// type Message = {
+//   role: "user" | "assistant";
+//   content: string;
+// };
+
 // export default function Questions({ chatId }: QuestionsProps) {
-//   // const [question, setQuestion] = useState("");
-//   // const [messages, setMessages] = useState<
-//   //   {
-//   //     role: "user" | "assistant";
-//   //     content: string;
-//   //   }[]
-//   // >([]);
-//   const { messages, input, handleInputChange, handleSubmit, status } = useChat({
-//     api: "/api/chat",
+//   const [question, setQuestion] = useState("");
+//   const [messages, setMessages] = useState<Message[]>([]);
+//   const [loading, setLoading] = useState(false);
 
-//     body: {
-//       chatId,
-//     },
-//   });
+//   async function loadMessages() {
+//     if (!chatId) return;
+
+//     const res = await fetch(`/api/chat/${chatId}/messages`);
+//     const data = await res.json();
+
+//     setMessages(data);
+//   }
+
+//   useEffect(() => {
+//     loadMessages();
+//   }, [chatId]);
+//   async function askQuestion() {
+//     if (!question.trim() || !chatId) return;
+
+//     const userQuestion = question;
+
+//     setQuestion("");
+//     setLoading(true);
+
+//     try {
+//       const response = await fetch("/api/chat", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           message: userQuestion,
+//           chatId,
+//         }),
+//       });
+
+//       const data = await response.json();
+
+//       if (!response.ok) {
+//         console.error(data);
+//         return;
+//       }
+
+//       // Reload messages from database
+//       await loadMessages();
+//     } catch (error) {
+//       console.error(error);
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
 //   // async function askQuestion() {
-//   //   if (!question.trim()) return;
-//   //   setMessages((prev) => [
-//   //     ...prev,
-//   //     {
-//   //       role: "user",
-//   //       content: question,
-//   //     },
-//   //   ]);
-//   //   const response = await fetch("/api/chat", {
-//   //     method: "POST",
-//   //     headers: {
-//   //       "Content-Type": "application/json",
-//   //     },
-//   //     body: JSON.stringify({
-//   //       message: question,
-//   //       chatId,
-//   //     }),
-//   //   });
+//   //   if (!question.trim() || loading) return;
 
-//   //   const data = await response.json();
+//   //   const userQuestion = question;
 
-//   //   console.log(data);
-//   //   setMessages((prev) => [
-//   //     ...prev,
-//   //     {
-//   //       role: "assistant",
-//   //       content: data.answer,
-//   //     },
-//   //   ]);
 //   //   setQuestion("");
+//   //   setLoading(true);
+
+//   //   try {
+//   //     const response = await fetch("/api/chat", {
+//   //       method: "POST",
+//   //       headers: {
+//   //         "Content-Type": "application/json",
+//   //       },
+//   //       body: JSON.stringify({
+//   //         message: userQuestion,
+//   //         chatId,
+//   //       }),
+//   //     });
+
+//   //     const data = await response.json();
+
+//   //     if (!response.ok) {
+//   //       console.error(data);
+//   //       return;
+//   //     }
+
+//   //     // Reload the entire conversation from DB
+//   //     await loadMessages();
+//   //   } catch (err) {
+//   //     console.error(err);
+//   //   } finally {
+//   //     setLoading(false);
+//   //   }
 //   // }
 
 //   return (
 //     <div className="w-full flex flex-col gap-4">
-//       {/* Input Bar Card */}
-//       <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-900 p-6 rounded-xl border border-zinc-800 shadow-lg w-full">
-//         <form onSubmit={handleSubmit}>
-//           <input
-//             type="text"
-//             value={input}
-//             onChange={handleInputChange}
-//             placeholder="Ask something..."
-//             className="block w-full text-sm bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-md py-2.5 px-4 focus:outline-none focus:border-blue-500 transition-colors placeholder-zinc-500"
-//           />
-
-//           <button
-//             type="submit"
-//             className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-6 rounded-md transition-colors shrink-0"
-//           >
-//             Ask
-//           </button>
-//         </form>
-//       </div>
-
-//       {/* Answer Section (Only shows if there is an answer) */}
-
-//       <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800/60 shadow-md w-full">
-//         <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+//       {/* Chat */}
+//       <div className="bg-zinc-900/50 p-6 rounded-xl border border-zinc-800">
+//         <h2 className="text-sm font-semibold text-zinc-400 uppercase mb-4">
 //           Chat
 //         </h2>
 
 //         <div className="space-y-6">
-//           {messages.map((message) => (
-//             <div key={message.id}>
-//               <b>{message.role}</b>
+//           {messages.map((message, index) => (
+//             <div
+//               key={index}
+//               className={
+//                 message.role === "user"
+//                   ? "flex justify-end"
+//                   : "flex justify-start"
+//               }
+//             >
+//               <div
+//                 className={`max-w-[80%] rounded-xl px-4 py-3 ${
+//                   message.role === "user" ? "bg-blue-600" : "bg-zinc-800"
+//                 }`}
+//               >
+//                 <p className="text-xs opacity-70 mb-2">
+//                   {message.role === "user" ? "You" : "AI"}
+//                 </p>
 
-//               {message.parts.map((part, index) => {
-//                 if (part.type === "text") {
-//                   return <p key={index}>{part.text}</p>;
-//                 }
-
-//                 return null;
-//               })}
+//                 <p className="whitespace-pre-wrap">{message.content}</p>
+//               </div>
 //             </div>
 //           ))}
+
+//           {messages.length === 0 && (
+//             <p className="text-zinc-500 text-center">Start a conversation...</p>
+//           )}
+//         </div>
+//         {/* Input */}
+//         <div className="flex gap-4 m-2 bg-zinc-900 p-6 rounded-xl border border-zinc-800 shadow-lg">
+//           <input
+//             type="text"
+//             value={question}
+//             onChange={(e) => setQuestion(e.target.value)}
+//             onKeyDown={(e) => {
+//               if (e.key === "Enter") {
+//                 askQuestion();
+//               }
+//             }}
+//             placeholder="Ask something..."
+//             className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-4 py-3 outline-none focus:border-blue-500"
+//           />
+
+//           <button
+//             onClick={askQuestion}
+//             disabled={loading}
+//             className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 rounded-md"
+//           >
+//             {loading ? "Thinking..." : "Ask"}
+//           </button>
 //         </div>
 //       </div>
 //     </div>

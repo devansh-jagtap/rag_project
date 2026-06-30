@@ -26,6 +26,7 @@ model Chat{
   createdAt DateTime @default(now())
 
   documents Document[]
+  messages  Message[]
 }
 model Message {
   id        String   @id @default(cuid())

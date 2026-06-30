@@ -2,9 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
 import { ragPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/prisma";
-import { streamText } from "ai";
 import { chatModel } from "@/lib/ai";
-
+import { generateText } from "ai";
 const ai = new GoogleGenAI({});
 
 export async function GET() {
@@ -21,6 +20,27 @@ export async function POST(req: Request) {
   try {
     const { message, chatId } = await req.json();
 
+    await prisma.message.create({
+      data: {
+        role: "user",
+        content: message,
+        chatId,
+      },
+    });
+    const previousMessages = await prisma.message.findMany({
+      where: {
+        chatId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10,
+    });
+
+    const history = previousMessages
+      .reverse()
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
     const questionResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
       contents: message,
@@ -38,7 +58,7 @@ export async function POST(req: Request) {
 
     const results = await index.namespace("documents").query({
       vector: questionEmbedding,
-      topK: 10,
+      topK: 5,
       includeMetadata: true,
       filter: {
         chatId: {
@@ -60,27 +80,45 @@ export async function POST(req: Request) {
     const context = results.matches
       .map((match) => match.metadata?.text as string)
       .join("\n\n");
+    if (!context) {
+      return Response.json({
+        success: true,
+        answer: "I couldn't find anything relevant in the uploaded documents.",
+      });
+    }
+    const prompt = `
+You are a helpful PDF assistant.
 
-    const prompt = await ragPrompt.format({
-      context,
-      question: message,
-    });
+Previous Conversation:
+${history}
 
-    // const answer = await ai.models.generateContent({
-    //   model: "gemini-2.5-flash",
-    //   contents: prompt,
-    // });
+Retrieved Context:
+${context}
 
-    // return Response.json({
-    //   success: true,
-    //   answer: answer.text,
-    // });
-    const result = streamText({
+Current Question:
+${message}
+
+Instructions:
+- Use both the previous conversation and the retrieved context.
+- If the user asks follow-up questions like "there", "it", "that project", use the conversation history.
+- If the answer is not in the retrieved context, say you couldn't find it.
+`;
+    const { text } = await generateText({
       model: chatModel,
       prompt,
     });
 
-    return result.toUIMessageStreamResponse();
+    await prisma.message.create({
+      data: {
+        role: "assistant",
+        content: text,
+        chatId,
+      },
+    });
+    return Response.json({
+      success: true,
+      answer: text,
+    });
   } catch (error) {
     console.error(error);
 
