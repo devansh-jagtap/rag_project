@@ -74,7 +74,7 @@ export async function POST(req: Request) {
 
     const results = await index.namespace("documents").query({
       vector: questionEmbedding,
-      topK: 5,
+      topK: 8,
       includeMetadata: true,
       filter: selectedDocument
         ? {
@@ -91,10 +91,18 @@ export async function POST(req: Request) {
             },
           },
     });
+    const SCORE_THRESHOLD = 0.72;
+    const filteredMatches = results.matches.filter(
+      (match) => (match.score ?? 0) >= SCORE_THRESHOLD,
+    );
 
-    console.log("Matches");
+    // Fallback if everything gets filtered out
+    const finalMatches =
+      filteredMatches.length > 0
+        ? filteredMatches
+        : results.matches.slice(0, 3);
 
-    results.matches.forEach((match, index) => {
+    finalMatches.forEach((match, index) => {
       console.log("----------------");
       console.log(index + 1);
       console.log("Score:", match.score);
@@ -102,7 +110,7 @@ export async function POST(req: Request) {
       console.log(match.metadata?.text);
     });
 
-    const context = results.matches
+    const context = finalMatches
       .map((match) => {
         return `
 Document: ${match.metadata?.title}
