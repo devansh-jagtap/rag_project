@@ -1,19 +1,32 @@
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ chatId: string }> }
+  _req: Request,
+  { params }: { params: Promise<{ chatId: string }> },
 ) {
-  const { chatId } = await params;
+  try {
+    const { chatId } = await params;
 
-  const documents = await prisma.document.findMany({
-    where: {
-      chatId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+    const documents = await prisma.document.findMany({
+      where: {
+        chatId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  return Response.json(documents);
+    return Response.json(documents);
+  } catch (error) {
+    console.error("Failed to load documents:", error);
+    return Response.json(
+      {
+        success: false,
+        error: String(error),
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 }

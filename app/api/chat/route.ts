@@ -1,19 +1,75 @@
 import { GoogleGenAI } from "@google/genai";
 import { index } from "@/lib/pinecone";
-import { ragPrompt } from "@/lib/prompt";
 import { prisma } from "@/lib/prisma";
 import { chatModel } from "@/lib/ai";
 import { generateText } from "ai";
 const ai = new GoogleGenAI({});
 
-export async function GET() {
-  const chats = await prisma.chat.findMany({
-    orderBy: {
-      createdAt: "desc",
+type Source = {
+  title: string;
+  chunkIndex: number | null;
+};
+
+function getMetadataString(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function getMetadataNumber(value: unknown) {
+  return typeof value === "number" ? value : null;
+}
+
+async function maybeGenerateChatTitle(chatId: string, message: string) {
+  const chat = await prisma.chat.findUnique({
+    where: {
+      id: chatId,
     },
   });
 
-  return Response.json(chats);
+  if (chat?.title !== "New Chat") return;
+
+  const { text: title } = await generateText({
+    model: chatModel,
+    prompt: `
+Generate a short chat title (max 4 words).
+
+First user message:
+${message}
+
+Return only the title.
+`,
+  });
+
+  await prisma.chat.update({
+    where: {
+      id: chatId,
+    },
+    data: {
+      title: title.replace(/["']/g, "").trim(),
+    },
+  });
+}
+
+export async function GET() {
+  try {
+    const chats = await prisma.chat.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return Response.json(chats);
+  } catch (error) {
+    console.error("Failed to load chats:", error);
+    return Response.json(
+      {
+        success: false,
+        error: String(error),
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 }
 
 export async function POST(req: Request) {
@@ -123,11 +179,22 @@ Return only the rewritten search query.
       console.log(match.metadata?.text);
     });
     console.log("Filtered:", filteredMatches.length);
-    // Step 1: Keep the source metadata
-    const sources = finalMatches.map((match) => ({
-      title: match.metadata?.title,
-      chunkIndex: match.metadata?.chunkIndex,
-    }));
+    const sources = Array.from(
+      finalMatches
+        .reduce((sourceMap, match) => {
+          const title = getMetadataString(match.metadata?.title, "Unknown PDF");
+
+          if (!sourceMap.has(title)) {
+            sourceMap.set(title, {
+              title,
+              chunkIndex: getMetadataNumber(match.metadata?.chunkIndex),
+            });
+          }
+
+          return sourceMap;
+        }, new Map<string, Source>())
+        .values(),
+    );
 
     const context = finalMatches
       .map((match) => {
@@ -141,9 +208,21 @@ ${match.metadata?.text}
       .join("\n----------------------\n");
 
     if (!context) {
+      const answer = "I couldn't find anything relevant in the uploaded documents.";
+
+      await maybeGenerateChatTitle(chatId, message);
+      await prisma.message.create({
+        data: {
+          role: "assistant",
+          content: answer,
+          chatId,
+        },
+      });
+
       return Response.json({
         success: true,
-        answer: "I couldn't find anything relevant in the uploaded documents.",
+        answer,
+        sources: [],
       });
     }
     const prompt = `
@@ -169,34 +248,8 @@ Rules:
       model: chatModel,
       prompt,
     });
-    const chat = await prisma.chat.findUnique({
-      where: {
-        id: chatId,
-      },
-    });
 
-    if (chat?.title === "New Chat") {
-      const { text: title } = await generateText({
-        model: chatModel,
-        prompt: `
-Generate a short chat title (max 4 words).
-
-First user message:
-${message}
-
-Return only the title.
-`,
-      });
-
-      await prisma.chat.update({
-        where: {
-          id: chatId,
-        },
-        data: {
-          title: title.replace(/["']/g, "").trim(),
-        },
-      });
-    }
+    await maybeGenerateChatTitle(chatId, message);
     await prisma.message.create({
       data: {
         role: "assistant",
@@ -205,7 +258,6 @@ Return only the title.
       },
     });
 
-    // Step 2: Return sources along with the answer
     return Response.json({
       success: true,
       answer: text,
