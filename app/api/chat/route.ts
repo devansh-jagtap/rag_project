@@ -70,9 +70,6 @@ Return only the rewritten search query.
 `,
     });
 
-    console.log("Original:", message);
-    console.log("Rewritten:", rewrittenQuery);
-
     const questionResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
       contents: rewrittenQuery,
