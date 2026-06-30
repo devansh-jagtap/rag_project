@@ -57,9 +57,25 @@ export async function POST(req: Request) {
       .reverse()
       .map((m) => `${m.role}: ${m.content}`)
       .join("\n");
+   
+    const { text: rewrittenQuery } = await generateText({
+      model: chatModel,
+      prompt: `
+Rewrite the user's question into a search query for retrieving relevant resume information.
+
+User Question:
+${message}
+
+Return only the rewritten search query.
+`,
+    });
+
+    console.log("Original:", message);
+    console.log("Rewritten:", rewrittenQuery);
+
     const questionResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
-      contents: message,
+      contents: rewrittenQuery,
       config: {
         taskType: "SEMANTIC_SIMILARITY",
         outputDimensionality: 1024,
@@ -91,16 +107,16 @@ export async function POST(req: Request) {
             },
           },
     });
-    const SCORE_THRESHOLD = 0.72;
-    const filteredMatches = results.matches.filter(
-      (match) => (match.score ?? 0) >= SCORE_THRESHOLD,
-    );
+    const SCORE_THRESHOLD = 0.65;
 
-    // Fallback if everything gets filtered out
+    const filteredMatches = results.matches
+      .filter((match) => (match.score ?? 0) >= SCORE_THRESHOLD)
+      .slice(0, 5);
+
     const finalMatches =
       filteredMatches.length > 0
         ? filteredMatches
-        : results.matches.slice(0, 3);
+        : results.matches.slice(0, 5);
 
     finalMatches.forEach((match, index) => {
       console.log("----------------");
@@ -109,16 +125,24 @@ export async function POST(req: Request) {
       console.log(match.metadata?.title);
       console.log(match.metadata?.text);
     });
+    console.log("Filtered:", filteredMatches.length);
+    // Step 1: Keep the source metadata
+    const sources = finalMatches.map((match) => ({
+      title: match.metadata?.title,
+      chunkIndex: match.metadata?.chunkIndex,
+    }));
 
     const context = finalMatches
       .map((match) => {
         return `
 Document: ${match.metadata?.title}
+Chunk: ${match.metadata?.chunkIndex}
 
 ${match.metadata?.text}
 `;
       })
       .join("\n----------------------\n");
+
     if (!context) {
       return Response.json({
         success: true,
@@ -183,9 +207,12 @@ Return only the title.
         chatId,
       },
     });
+
+    // Step 2: Return sources along with the answer
     return Response.json({
       success: true,
       answer: text,
+      sources,
     });
   } catch (error) {
     console.error(error);

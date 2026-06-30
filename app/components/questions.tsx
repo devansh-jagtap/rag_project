@@ -6,9 +6,14 @@ type QuestionsProps = {
   chatId: string;
 };
 
+// Step 1: Updated Message type to include sources
 type Message = {
   role: "user" | "assistant";
   content: string;
+  sources?: {
+    title: string;
+    chunkIndex: number;
+  }[];
 };
 
 export default function Questions({ chatId }: QuestionsProps) {
@@ -64,6 +69,23 @@ export default function Questions({ chatId }: QuestionsProps) {
 
       // Reload entire conversation from database to maintain synchronized state
       await loadMessages();
+
+      // Step 2: Attach the retrieved sources to the latest assistant message in the state
+      if (data.sources && data.sources.length > 0) {
+        setMessages((prev) => {
+          if (prev.length === 0) return prev;
+          const updated = [...prev];
+          const lastMessage = updated[updated.length - 1];
+          
+          if (lastMessage && lastMessage.role === "assistant") {
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              sources: data.sources,
+            };
+          }
+          return updated;
+        });
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -108,7 +130,9 @@ export default function Questions({ chatId }: QuestionsProps) {
             <div
               key={index}
               className={
-                message.role === "user" ? "flex justify-end" : "flex justify-start"
+                message.role === "user"
+                  ? "flex justify-end"
+                  : "flex justify-start"
               }
             >
               <div
@@ -120,7 +144,27 @@ export default function Questions({ chatId }: QuestionsProps) {
                   {message.role === "user" ? "You" : "AI"}
                 </p>
 
-                <p className="whitespace-pre-wrap text-zinc-100">{message.content}</p>
+                <p className="whitespace-pre-wrap text-zinc-100">
+                  {message.content}
+                </p>
+
+                {/* Step 3: Render metadata sources under the assistant's response */}
+                {message.role === "assistant" &&
+                  message.sources &&
+                  message.sources.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-zinc-700/50 text-xs text-zinc-400">
+                      <p className="font-semibold mb-1 text-zinc-300">Sources</p>
+                      <div className="space-y-1">
+                        {message.sources.map((source, i) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <span>📄</span>
+                            <span className="truncate max-w-[250px]">{source.title}</span>
+                            {/* <span className="text-zinc-500">(Chunk {source.chunkIndex})</span> */}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           ))}
@@ -135,7 +179,6 @@ export default function Questions({ chatId }: QuestionsProps) {
     </div>
   );
 }
-
 // "use client";
 
 // import { useEffect, useState } from "react";
