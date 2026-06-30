@@ -20,6 +20,22 @@ export async function POST(req: Request) {
   try {
     const { message, chatId } = await req.json();
 
+    const documents = await prisma.document.findMany({
+      where: {
+        chatId,
+      },
+    });
+
+    let selectedDocument: string | null = null;
+
+    for (const document of documents) {
+      if (message.toLowerCase().includes(document.title.toLowerCase())) {
+        selectedDocument = document.title;
+        break;
+      }
+    }
+
+    console.log("Selected Document:", selectedDocument);
     await prisma.message.create({
       data: {
         role: "user",
@@ -60,11 +76,20 @@ export async function POST(req: Request) {
       vector: questionEmbedding,
       topK: 5,
       includeMetadata: true,
-      filter: {
-        chatId: {
-          $eq: chatId,
-        },
-      },
+      filter: selectedDocument
+        ? {
+            chatId: {
+              $eq: chatId,
+            },
+            title: {
+              $eq: selectedDocument,
+            },
+          }
+        : {
+            chatId: {
+              $eq: chatId,
+            },
+          },
     });
 
     console.log("Matches");
@@ -78,8 +103,14 @@ export async function POST(req: Request) {
     });
 
     const context = results.matches
-      .map((match) => match.metadata?.text as string)
-      .join("\n\n");
+      .map((match) => {
+        return `
+Document: ${match.metadata?.title}
+
+${match.metadata?.text}
+`;
+      })
+      .join("\n----------------------\n");
     if (!context) {
       return Response.json({
         success: true,
@@ -87,27 +118,56 @@ export async function POST(req: Request) {
       });
     }
     const prompt = `
-You are a helpful PDF assistant.
+You are an AI assistant that answers questions using uploaded PDFs.
 
 Previous Conversation:
 ${history}
 
-Retrieved Context:
+Retrieved Documents:
 ${context}
 
 Current Question:
 ${message}
 
-Instructions:
-- Use both the previous conversation and the retrieved context.
-- If the user asks follow-up questions like "there", "it", "that project", use the conversation history.
-- If the answer is not in the retrieved context, say you couldn't find it.
+Rules:
+- Use the retrieved documents first.
+- Use conversation history for follow-up questions.
+- Mention the document name whenever relevant.
+- If information comes from multiple PDFs, combine it into one answer.
+- If the answer is missing, say you couldn't find it.
 `;
     const { text } = await generateText({
       model: chatModel,
       prompt,
     });
+    const chat = await prisma.chat.findUnique({
+      where: {
+        id: chatId,
+      },
+    });
 
+    if (chat?.title === "New Chat") {
+      const { text: title } = await generateText({
+        model: chatModel,
+        prompt: `
+Generate a short chat title (max 4 words).
+
+First user message:
+${message}
+
+Return only the title.
+`,
+      });
+
+      await prisma.chat.update({
+        where: {
+          id: chatId,
+        },
+        data: {
+          title: title.replace(/["']/g, "").trim(),
+        },
+      });
+    }
     await prisma.message.create({
       data: {
         role: "assistant",
