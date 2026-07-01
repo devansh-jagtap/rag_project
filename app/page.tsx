@@ -1,6 +1,12 @@
 "use client";
 
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import {
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useUser,
+} from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -51,6 +57,7 @@ const uploadSteps: Exclude<UploadStatus, "idle">[] = [
 ];
 
 export default function Home() {
+  const { isLoaded, isSignedIn } = useUser();
   const [file, setFile] = useState<File | null>(null);
   const [chatId, setChatId] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
@@ -74,6 +81,12 @@ export default function Home() {
   }, []);
 
   const refreshChats = useCallback(async (preferredChatId?: string) => {
+    if (!isLoaded || !isSignedIn) {
+      setChats([]);
+      setChatId("");
+      return [];
+    }
+
     try {
       const data = await fetchJson<Chat[]>("/api/chat");
 
@@ -98,10 +111,10 @@ export default function Home() {
       console.error("Failed to refresh chats:", error);
       return [];
     }
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const refreshDocuments = useCallback(async (targetChatId: string) => {
-    if (!targetChatId) {
+    if (!targetChatId || !isLoaded || !isSignedIn) {
       setDocuments([]);
       return [];
     }
@@ -117,13 +130,22 @@ export default function Home() {
       console.error("Failed to refresh documents:", error);
       return [];
     }
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     void Promise.resolve().then(() => refreshDocuments(chatId));
   }, [chatId, refreshDocuments]);
 
   async function createChat() {
+    if (!isSignedIn) {
+      addToast({
+        type: "error",
+        title: "Sign in first",
+        message: "Create an account or sign in before starting a chat.",
+      });
+      return;
+    }
+
     try {
       const chat = await fetchJson<Chat>("/api/chat/create", {
         method: "POST",
@@ -147,6 +169,8 @@ export default function Home() {
   }, [refreshChats]);
 
   async function deleteChat(targetChatId: string) {
+    if (!isSignedIn) return;
+
     const targetChat = chats.find((chat) => chat.id === targetChatId);
     const confirmed = window.confirm(
       `Delete "${targetChat?.title ?? "this chat"}" and all of its PDFs? This cannot be undone.`,
@@ -176,7 +200,7 @@ export default function Home() {
   }
 
   async function deleteDocument(docId: string) {
-    if (!chatId) return;
+    if (!chatId || !isSignedIn) return;
 
     const document = documents.find((doc) => doc.id === docId);
     const confirmed = window.confirm(
@@ -210,6 +234,15 @@ export default function Home() {
   }
 
   const handleClick = async () => {
+    if (!isSignedIn) {
+      addToast({
+        type: "error",
+        title: "Sign in first",
+        message: "Sign in before uploading PDFs.",
+      });
+      return;
+    }
+
     if (!chatId) {
       addToast({
         type: "error",
@@ -335,32 +368,34 @@ export default function Home() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex h-11 min-w-0 cursor-pointer items-center gap-3 rounded-md border border-zinc-700 bg-zinc-900 px-4 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800">
-                <Plus size={17} />
-                <span className="max-w-56 truncate">
-                  {file?.name ?? "Choose PDF"}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="sr-only"
-                />
-              </label>
+              <Show when="signed-in">
+                <label className="flex h-11 min-w-0 cursor-pointer items-center gap-3 rounded-md border border-zinc-700 bg-zinc-900 px-4 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800">
+                  <Plus size={17} />
+                  <span className="max-w-56 truncate">
+                    {file?.name ?? "Choose PDF"}
+                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="sr-only"
+                  />
+                </label>
 
-              <button
-                onClick={handleClick}
-                disabled={!file || isUploading}
-                className="flex h-11 items-center gap-2 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isUploading ? (
-                  <Loader2 size={17} className="animate-spin" />
-                ) : (
-                  <Upload size={17} />
-                )}
-                Upload
-              </button>
+                <button
+                  onClick={handleClick}
+                  disabled={!file || isUploading}
+                  className="flex h-11 items-center gap-2 rounded-md bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <Loader2 size={17} className="animate-spin" />
+                  ) : (
+                    <Upload size={17} />
+                  )}
+                  Upload
+                </button>
+              </Show>
 
               <div className="flex h-11 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2">
                 <Show when="signed-out">
@@ -420,116 +455,147 @@ export default function Home() {
           )}
         </header>
 
-        <div className="border-b border-zinc-800 bg-[#151515] p-4 xl:hidden">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Uploaded PDFs
+        <Show when="signed-out">
+          <div className="flex min-h-0 flex-1 items-center justify-center p-8">
+            <div className="max-w-lg text-center">
+              <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-blue-300">
+                <PanelLeft size={24} />
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight text-zinc-50">
+                Sign in to chat with your PDFs
               </h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                {documents.length} document{documents.length === 1 ? "" : "s"}
+              <p className="mt-3 text-sm leading-6 text-zinc-400">
+                Create your first account or sign in to upload documents, keep
+                chats saved, and see your profile controls in the header.
               </p>
+              <div className="mt-6 flex justify-center gap-3">
+                <SignInButton mode="modal">
+                  <button className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800 hover:text-white">
+                    Sign in
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="rounded-md bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-white">
+                    Sign up
+                  </button>
+                </SignUpButton>
+              </div>
             </div>
           </div>
+        </Show>
 
-          {documents.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-zinc-800 p-4 text-sm text-zinc-500">
-              Upload a PDF to enable chat.
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex min-w-72 items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3"
-                >
-                  <div className="rounded-md bg-blue-500/10 p-2 text-blue-300">
-                    <FileText size={17} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-zinc-100">
-                      {doc.title}
-                    </p>
-                    <p className="text-xs text-zinc-500">Ready for chat</p>
-                  </div>
-                  <button
-                    type="button"
-                    title="Delete PDF"
-                    onClick={() => void deleteDocument(doc.id)}
-                    className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px]">
-          <Questions
-            chatId={chatId}
-            documentsCount={documents.length}
-            onChatsRefresh={refreshChats}
-          />
-
-          <aside className="hidden min-h-0 border-l border-zinc-800 bg-[#161616] xl:flex xl:flex-col">
-            <div className="border-b border-zinc-800 p-5">
-              <h2 className="text-sm font-semibold text-zinc-100">
-                Uploaded PDFs
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500">
-                {documents.length} document{documents.length === 1 ? "" : "s"} in
-                this chat
-              </p>
+        <Show when="signed-in">
+          <div className="border-b border-zinc-800 bg-[#151515] p-4 xl:hidden">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  Uploaded PDFs
+                </h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {documents.length} document{documents.length === 1 ? "" : "s"}
+                </p>
+              </div>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-              {documents.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <div className="mb-4 rounded-full border border-zinc-800 bg-zinc-900 p-4 text-zinc-400">
-                    <FileText size={24} />
-                  </div>
-                  <p className="text-sm font-medium text-zinc-300">
-                    No PDFs uploaded
-                  </p>
-                  <p className="mt-1 max-w-56 text-sm text-zinc-500">
-                    Upload a document to unlock retrieval-backed answers.
-                  </p>
-                </div>
-              ) : (
-                documents.map((doc) => (
+            {documents.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-zinc-800 p-4 text-sm text-zinc-500">
+                Upload a PDF to enable chat.
+              </div>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="group rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition hover:border-zinc-700 hover:bg-zinc-900"
+                    className="flex min-w-72 items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-md bg-blue-500/10 p-2 text-blue-300">
-                        <FileText size={18} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-zinc-100">
-                          {doc.title}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Available for this chat
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        title="Delete PDF"
-                        onClick={() => void deleteDocument(doc.id)}
-                        className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="rounded-md bg-blue-500/10 p-2 text-blue-300">
+                      <FileText size={17} />
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-zinc-100">
+                        {doc.title}
+                      </p>
+                      <p className="text-xs text-zinc-500">Ready for chat</p>
+                    </div>
+                    <button
+                      type="button"
+                      title="Delete PDF"
+                      onClick={() => void deleteDocument(doc.id)}
+                      className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                ))
-              )}
-            </div>
-          </aside>
-        </section>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px]">
+            <Questions
+              chatId={chatId}
+              documentsCount={documents.length}
+              onChatsRefresh={refreshChats}
+            />
+
+            <aside className="hidden min-h-0 border-l border-zinc-800 bg-[#161616] xl:flex xl:flex-col">
+              <div className="border-b border-zinc-800 p-5">
+                <h2 className="text-sm font-semibold text-zinc-100">
+                  Uploaded PDFs
+                </h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {documents.length} document
+                  {documents.length === 1 ? "" : "s"} in this chat
+                </p>
+              </div>
+
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                {documents.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center text-center">
+                    <div className="mb-4 rounded-full border border-zinc-800 bg-zinc-900 p-4 text-zinc-400">
+                      <FileText size={24} />
+                    </div>
+                    <p className="text-sm font-medium text-zinc-300">
+                      No PDFs uploaded
+                    </p>
+                    <p className="mt-1 max-w-56 text-sm text-zinc-500">
+                      Upload a document to unlock retrieval-backed answers.
+                    </p>
+                  </div>
+                ) : (
+                  documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="group rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition hover:border-zinc-700 hover:bg-zinc-900"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-md bg-blue-500/10 p-2 text-blue-300">
+                          <FileText size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-zinc-100">
+                            {doc.title}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Available for this chat
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          title="Delete PDF"
+                          onClick={() => void deleteDocument(doc.id)}
+                          className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </aside>
+          </section>
+        </Show>
       </main>
 
       <div className="fixed right-5 top-5 z-50 flex w-96 max-w-[calc(100vw-2.5rem)] flex-col gap-3">
