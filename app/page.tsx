@@ -1,5 +1,6 @@
 "use client";
 
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -333,7 +334,7 @@ export default function Home() {
               </h1>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <label className="flex h-11 min-w-0 cursor-pointer items-center gap-3 rounded-md border border-zinc-700 bg-zinc-900 px-4 text-sm text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800">
                 <Plus size={17} />
                 <span className="max-w-56 truncate">
@@ -360,6 +361,24 @@ export default function Home() {
                 )}
                 Upload
               </button>
+
+              <div className="flex h-11 items-center gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-2">
+                <Show when="signed-out">
+                  <SignInButton mode="modal">
+                    <button className="rounded-md px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white">
+                      Sign in
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button className="rounded-md bg-zinc-100 px-3 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-white">
+                      Sign up
+                    </button>
+                  </SignUpButton>
+                </Show>
+                <Show when="signed-in">
+                  <UserButton />
+                </Show>
+              </div>
             </div>
           </div>
 
