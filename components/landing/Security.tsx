@@ -1,5 +1,5 @@
 import { CheckCircle2, LockKeyhole } from "lucide-react";
-import { LandingSectionHeading } from "./landing-section-heading";
+import { SectionHeading } from "./SectionHeading";
 
 const points = [
   "Authentication protects API routes before data loads.",
@@ -12,7 +12,7 @@ export function LandingSecurity() {
   return (
     <section id="security" className="mx-auto max-w-7xl px-6 py-24">
       <div className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
-        <LandingSectionHeading
+        <SectionHeading
           eyebrow="Security"
           title="A private workspace before the first upload"
           body="The signed-out page explains the product, while the actual chat, upload, document, and profile controls remain behind authentication."

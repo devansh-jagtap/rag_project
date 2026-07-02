@@ -1,5 +1,5 @@
 import { BriefcaseBusiness, GraduationCap, ScrollText } from "lucide-react";
-import { LandingSectionHeading } from "./landing-section-heading";
+import { SectionHeading } from "./SectionHeading";
 
 const useCases = [
   {
@@ -23,7 +23,7 @@ export function LandingUseCases() {
   return (
     <section id="use-cases" className="border-y border-zinc-900 bg-[#151515]">
       <div className="mx-auto max-w-7xl px-6 py-24">
-        <LandingSectionHeading
+        <SectionHeading
           eyebrow="Use cases"
           title="Built for documents that need careful answers"
           body="The product is quiet and focused: no marketing maze, just a structured place to ask useful questions of uploaded PDFs."

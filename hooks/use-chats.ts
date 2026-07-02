@@ -8,7 +8,6 @@ import {
   deleteDocumentRequest,
   listChats,
   listDocuments,
-} from "../_lib/workspace-api";
 } from "@/lib/workspace-api";
 import type { Chat, Document, Toast } from "@/types/workspace";
 

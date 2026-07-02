@@ -38,7 +38,7 @@ export function Testimonials() {
               className="rounded-lg border border-zinc-800 bg-[#101010] p-6"
             >
               <p className="text-sm leading-7 text-zinc-300">
-                "{testimonial.quote}"
+                &ldquo;{testimonial.quote}&rdquo;
               </p>
               <div className="mt-6 border-t border-zinc-800 pt-4">
                 <p className="text-sm font-semibold text-zinc-50">
