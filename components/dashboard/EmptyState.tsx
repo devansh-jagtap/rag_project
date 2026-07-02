@@ -8,11 +8,10 @@ export function NoDocumentsState() {
           <FileSearch size={34} />
         </div>
         <h2 className="text-2xl font-semibold tracking-tight text-zinc-50">
-          Upload a PDF to start chatting
+          Upload your first PDF
         </h2>
         <p className="mt-3 text-base leading-7 text-zinc-400">
-          Add a document from the upload control above. Once processing
-          completes, the chat input and conversation history will appear here.
+          Upload one or more PDFs to begin chatting with your documents.
         </p>
       </div>
     </div>

@@ -4,8 +4,8 @@ import { AuthButtons } from "./AuthButtons";
 const navItems = [
   { label: "Features", href: "#features" },
   { label: "Workflow", href: "#workflow" },
-  { label: "Security", href: "#security" },
-  { label: "Use cases", href: "#use-cases" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
 ];
 
 export function Navbar() {
