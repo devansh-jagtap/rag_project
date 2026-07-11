@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PDF Workspace (RAG)
+
+A private Retrieval-Augmented Generation (RAG) workspace built with Next.js.
+
+Upload PDFs, ask questions in chat, and get source-backed answers from the documents in the active chat.
+
+## Features
+
+- Clerk-authenticated workspace and protected API routes
+- Multi-chat workflow with persisted chats/messages/documents
+- PDF upload pipeline (extract text -> chunk -> embed -> store vectors)
+- Retrieval-first answers scoped to the active chat’s documents
+- Source cards for answer grounding
+- Delete chats/documents with cleanup of associated records and vectors
+
+## Tech Stack
+
+- Next.js 16 (App Router) + React 19 + TypeScript
+- Prisma + PostgreSQL
+- Pinecone (vector database)
+- Google GenAI embeddings (`gemini-embedding-2`)
+- AI SDK Gateway model for chat generation (`google/gemini-2.5-flash`)
+- Clerk authentication
+
+## Prerequisites
+
+- Node.js 20+
+- npm
+- PostgreSQL database
+- Pinecone index (dimension 1024)
+- Clerk project
+- Google API key (for embeddings)
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# Prisma / Postgres
+DATABASE_URL="******HOST:PORT/DB?sslmode=require"
+
+# Pinecone
+PINECONE_API_KEY="your_pinecone_api_key"
+PINECONE_INDEX_NAME="your_index_name"
+
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
+CLERK_SECRET_KEY="sk_..."
+
+# Google GenAI (used by @google/genai)
+GOOGLE_API_KEY="your_google_api_key"
+```
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+npx prisma generate
+npx prisma migrate deploy
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Useful Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev      # start local dev server
+npm run build    # production build
+npm run start    # run production server
+npm run lint     # lint codebase
+```
 
-## Learn More
+## How the RAG Flow Works
 
-To learn more about Next.js, take a look at the following resources:
+1. Create a chat.
+2. Upload a PDF in that chat.
+3. Server extracts text, chunks it, creates embeddings, and stores vectors in Pinecone namespace `documents`.
+4. Ask a question.
+5. The API rewrites the query, retrieves relevant chunks, and generates a grounded response with sources.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure (high level)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `app/` - routes, pages, API handlers
+- `components/` - dashboard and marketing UI
+- `hooks/` - client workspace state and upload/chat logic
+- `lib/` - shared clients and helpers (Prisma, Pinecone, model config)
+- `prisma/` - schema and migrations
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Prisma client is generated to `app/generated/prisma`.
+- Most routes are protected by Clerk middleware (except configured public marketing/auth routes).
