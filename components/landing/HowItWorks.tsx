@@ -25,7 +25,7 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section id="workflow" className="border-y border-zinc-900 bg-[#141414]">
+    <section id="workflow" className="border-y border-white/70 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-6 py-24">
         <SectionHeading
           eyebrow="Workflow"
@@ -37,15 +37,15 @@ export function HowItWorks() {
           {steps.map((step) => (
             <article
               key={step.number}
-              className="rounded-lg border border-zinc-800 bg-[#101010] p-5"
+              className="rounded-[1.5rem] border border-white/80 bg-white/65 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
             >
-              <p className="text-sm font-semibold text-blue-300">
+              <p className="text-sm font-extrabold text-blue-600">
                 {step.number}
               </p>
-              <h3 className="mt-5 text-lg font-semibold text-zinc-50">
+              <h3 className="mt-5 text-lg font-extrabold text-slate-950">
                 {step.title}
               </h3>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
+              <p className="mt-3 text-sm leading-6 text-slate-600">
                 {step.body}
               </p>
             </article>

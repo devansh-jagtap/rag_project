@@ -23,7 +23,7 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <section className="border-y border-zinc-900 bg-[#151515]">
+    <section className="border-y border-white/70 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-6 py-24">
         <SectionHeading
           eyebrow="Testimonials"
@@ -35,16 +35,16 @@ export function Testimonials() {
           {testimonials.map((testimonial) => (
             <article
               key={testimonial.name}
-              className="rounded-lg border border-zinc-800 bg-[#101010] p-6"
+              className="rounded-[1.5rem] border border-white/80 bg-white/65 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
             >
-              <p className="text-sm leading-7 text-zinc-300">
+              <p className="text-sm leading-7 text-slate-700">
                 &ldquo;{testimonial.quote}&rdquo;
               </p>
-              <div className="mt-6 border-t border-zinc-800 pt-4">
-                <p className="text-sm font-semibold text-zinc-50">
+              <div className="mt-6 border-t border-slate-200/80 pt-4">
+                <p className="text-sm font-extrabold text-slate-950">
                   {testimonial.name}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-slate-500">
                   {testimonial.role}
                 </p>
               </div>

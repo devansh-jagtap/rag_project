@@ -13,18 +13,18 @@ export function MobileDocuments({
   onDeleteDocument,
 }: MobileDocumentsProps) {
   return (
-    <div className="border-b border-zinc-800 bg-[#151515] p-4 xl:hidden">
+    <div className="border-b border-white/70 bg-white/45 p-4 backdrop-blur-2xl xl:hidden">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-100">Uploaded PDFs</h2>
-          <p className="mt-1 text-xs text-zinc-500">
+          <h2 className="text-sm font-extrabold text-slate-950">Uploaded PDFs</h2>
+          <p className="mt-1 text-xs text-slate-500">
             {documents.length} document{documents.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
 
       {documents.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-800 p-4 text-sm text-zinc-500">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/55 p-4 text-sm text-slate-500">
           Upload a PDF to enable chat.
         </div>
       ) : (

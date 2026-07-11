@@ -5,7 +5,7 @@ import { Navbar } from "@/components/landing/Navbar";
 
 export default function FeaturesPage() {
   return (
-    <main className="min-h-screen bg-[#101010] text-zinc-100">
+    <main className="min-h-screen text-slate-950">
       <Navbar />
       <Features />
       <CTA />

@@ -9,10 +9,10 @@ export function UploadProgress({ uploadStatus }: UploadProgressProps) {
   if (uploadStatus === "idle") return null;
 
   return (
-    <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950/80 p-4">
+    <div className="mt-5 rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm backdrop-blur-xl">
       <div className="mb-3 flex items-center justify-between text-sm">
-        <span className="font-medium text-zinc-200">{uploadStatus}</span>
-        <span className="text-zinc-500">
+        <span className="font-bold text-slate-800">{uploadStatus}</span>
+        <span className="text-slate-500">
           {uploadStatus === "Completed" ? "Done" : "Processing"}
         </span>
       </div>
@@ -26,12 +26,12 @@ export function UploadProgress({ uploadStatus }: UploadProgressProps) {
             <div key={step} className="flex items-center gap-2">
               <div
                 className={`h-2 flex-1 rounded-full ${
-                  isComplete ? "bg-blue-500" : "bg-zinc-800"
+                  isComplete ? "bg-blue-500" : "bg-slate-200"
                 }`}
               />
               <span
                 className={`hidden text-xs sm:block ${
-                  isComplete ? "text-zinc-200" : "text-zinc-600"
+                  isComplete ? "text-slate-700" : "text-slate-400"
                 }`}
               >
                 {step}

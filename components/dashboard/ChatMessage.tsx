@@ -14,16 +14,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={`flex gap-4 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
-        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-blue-300">
+        <div className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/70 text-blue-600 shadow-sm backdrop-blur-xl">
           <Bot size={17} />
         </div>
       )}
 
       <div
-        className={`max-w-[82%] rounded-2xl px-5 py-4 text-sm leading-7 shadow-sm ${
+        className={`max-w-[82%] rounded-[1.5rem] px-5 py-4 text-sm leading-7 shadow-sm ${
           isUser
-            ? "bg-blue-600 text-white"
-            : "border border-zinc-800 bg-zinc-900 text-zinc-100"
+            ? "bg-blue-600 text-white shadow-xl shadow-blue-200/70"
+            : "border border-white/80 bg-white/75 text-slate-800 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
         }`}
       >
         {isUser ? (
@@ -41,7 +41,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       </div>
 
       {isUser && (
-        <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+        <div className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
           <User size={16} />
         </div>
       )}

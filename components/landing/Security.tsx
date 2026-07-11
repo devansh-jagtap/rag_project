@@ -18,16 +18,16 @@ export function LandingSecurity() {
           body="The signed-out page explains the product, while the actual chat, upload, document, and profile controls remain behind authentication."
         />
 
-        <div className="rounded-lg border border-zinc-800 bg-[#151515] p-6">
+        <div className="rounded-[1.5rem] border border-white/80 bg-white/65 p-6 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
           <div className="mb-6 flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950 text-amber-300">
+            <span className="flex size-12 items-center justify-center rounded-2xl border border-white/80 bg-white/80 text-amber-600 shadow-sm">
               <LockKeyhole size={21} />
             </span>
             <div>
-              <h3 className="font-semibold text-zinc-50">
+              <h3 className="font-extrabold text-slate-950">
                 Workspace controls
               </h3>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-slate-500">
                 Uploads and retrieval are available after sign-in.
               </p>
             </div>
@@ -37,10 +37,10 @@ export function LandingSecurity() {
             {points.map((point) => (
               <div
                 key={point}
-                className="flex gap-3 rounded-md border border-zinc-800 bg-zinc-950 p-4"
+                className="flex gap-3 rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm"
               >
-                <CheckCircle2 size={18} className="mt-0.5 text-emerald-300" />
-                <p className="text-sm leading-6 text-zinc-400">{point}</p>
+                <CheckCircle2 size={18} className="mt-0.5 text-emerald-600" />
+                <p className="text-sm leading-6 text-slate-600">{point}</p>
               </div>
             ))}
           </div>

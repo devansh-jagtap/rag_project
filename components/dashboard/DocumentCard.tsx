@@ -16,20 +16,20 @@ export function DocumentCard({
 }: DocumentCardProps) {
   const cardClass =
     layout === "mobile"
-      ? "flex min-w-72 items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-3"
-      : "group rounded-lg border border-zinc-800 bg-zinc-900/80 p-4 transition hover:border-zinc-700 hover:bg-zinc-900";
+      ? "flex min-w-72 items-center gap-3 rounded-2xl border border-white/80 bg-white/75 p-3 shadow-sm backdrop-blur-xl"
+      : "group rounded-2xl border border-white/80 bg-white/65 p-4 shadow-sm backdrop-blur-xl transition hover:bg-white";
 
   return (
     <div key={doc.id} className={cardClass}>
       <div className="flex items-start gap-3">
-        <div className="rounded-md bg-blue-500/10 p-2 text-blue-300">
+        <div className="rounded-2xl bg-blue-50 p-2 text-blue-600">
           <FileText size={layout === "mobile" ? 17 : 18} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-zinc-100">
+          <p className="truncate text-sm font-bold text-slate-900">
             {doc.title}
           </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-slate-500">
             {layout === "mobile" ? "Ready for chat" : "Available for this chat"}
           </p>
         </div>
@@ -37,7 +37,7 @@ export function DocumentCard({
           type="button"
           title="Delete PDF"
           onClick={() => onDeleteDocument(doc.id)}
-          className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
+          className="rounded-xl p-1.5 text-slate-400 transition hover:bg-red-500/10 hover:text-red-500"
         >
           <Trash2 size={16} />
         </button>

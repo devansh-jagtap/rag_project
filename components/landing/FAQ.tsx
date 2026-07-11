@@ -25,7 +25,7 @@ const faqs = [
 
 export function FAQ() {
   return (
-    <section id="faq" className="border-y border-zinc-900 bg-[#151515]">
+    <section id="faq" className="border-y border-white/70 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-6 py-24">
         <SectionHeading
           eyebrow="FAQ"
@@ -37,10 +37,10 @@ export function FAQ() {
           {faqs.map((faq) => (
             <article
               key={faq.question}
-              className="rounded-lg border border-zinc-800 bg-[#101010] p-5"
+              className="rounded-[1.5rem] border border-white/80 bg-white/65 p-6 shadow-sm backdrop-blur-xl"
             >
-              <h3 className="font-semibold text-zinc-50">{faq.question}</h3>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
+              <h3 className="font-extrabold text-slate-950">{faq.question}</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
                 {faq.answer}
               </p>
             </article>

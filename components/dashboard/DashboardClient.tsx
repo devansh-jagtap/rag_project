@@ -17,7 +17,7 @@ export default function DashboardClient() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#111111] text-zinc-100 md:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden text-slate-950 md:flex-row">
       <Sidebar
         chatId={workspace.chatId}
         chats={workspace.chats}
@@ -26,7 +26,7 @@ export default function DashboardClient() {
         onDeleteChat={(chatId) => void workspace.deleteChat(chatId)}
       />
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main className="flex min-w-0 flex-1 flex-col bg-white/35 backdrop-blur-xl">
         <TopBar
           activeChatTitle={workspace.activeChat?.title}
           file={workspace.file}
@@ -42,7 +42,7 @@ export default function DashboardClient() {
           onDeleteDocument={(docId) => void workspace.deleteDocument(docId)}
         />
 
-        <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
           <ChatWindow
             chatId={workspace.chatId}
             documentsCount={workspace.documents.length}

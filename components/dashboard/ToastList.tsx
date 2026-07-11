@@ -14,12 +14,12 @@ export function ToastList({ toasts, onDismiss }: ToastListProps) {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/30"
+          className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-2xl shadow-slate-300/70 backdrop-blur-2xl"
         >
           <div className="flex gap-3">
             <div
               className={
-                toast.type === "success" ? "text-emerald-400" : "text-red-400"
+                toast.type === "success" ? "text-emerald-600" : "text-red-500"
               }
             >
               {toast.type === "success" ? (
@@ -29,18 +29,18 @@ export function ToastList({ toasts, onDismiss }: ToastListProps) {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-zinc-100">
+              <p className="text-sm font-extrabold text-slate-950">
                 {toast.title}
               </p>
               {toast.message && (
-                <p className="mt-1 text-sm text-zinc-400">{toast.message}</p>
+                <p className="mt-1 text-sm text-slate-600">{toast.message}</p>
               )}
             </div>
             <button
               type="button"
               title="Dismiss notification"
               onClick={() => onDismiss(toast.id)}
-              className="rounded-md p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded-xl p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             >
               <X size={16} />
             </button>

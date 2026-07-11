@@ -11,7 +11,7 @@ import { TrustedBy } from "./TrustedBy";
 
 export function LandingPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#101010] text-zinc-100">
+    <main className="min-h-screen overflow-hidden text-slate-950">
       <Navbar />
       <Hero />
       <TrustedBy />

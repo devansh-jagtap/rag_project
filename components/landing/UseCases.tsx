@@ -21,7 +21,7 @@ const useCases = [
 
 export function LandingUseCases() {
   return (
-    <section id="use-cases" className="border-y border-zinc-900 bg-[#151515]">
+    <section id="use-cases" className="border-y border-white/70 bg-white/35 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-6 py-24">
         <SectionHeading
           eyebrow="Use cases"
@@ -36,13 +36,13 @@ export function LandingUseCases() {
             return (
               <article
                 key={item.title}
-                className="rounded-lg border border-zinc-800 bg-[#101010] p-6"
+                className="rounded-[1.5rem] border border-white/80 bg-white/65 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl"
               >
-                <Icon size={24} className="text-blue-300" />
-                <h3 className="mt-6 text-xl font-semibold text-zinc-50">
+                <Icon size={24} className="text-blue-600" />
+                <h3 className="mt-6 text-xl font-extrabold text-slate-950">
                   {item.title}
                 </h3>
-                <p className="mt-3 text-sm leading-6 text-zinc-400">
+                <p className="mt-3 text-sm leading-6 text-slate-600">
                   {item.body}
                 </p>
               </article>

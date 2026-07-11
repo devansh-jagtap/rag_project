@@ -5,7 +5,7 @@ import { SectionHeading } from "@/components/landing/SectionHeading";
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen bg-[#101010] text-zinc-100">
+    <main className="min-h-screen text-slate-950">
       <Navbar />
       <section className="mx-auto max-w-5xl px-6 py-24">
         <SectionHeading

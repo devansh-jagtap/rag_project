@@ -30,18 +30,18 @@ export function Pricing() {
         {plans.map((plan) => (
           <article
             key={plan.name}
-            className="rounded-lg border border-zinc-800 bg-[#151515] p-6"
+            className="rounded-[1.5rem] border border-white/80 bg-white/65 p-7 shadow-xl shadow-slate-200/60 backdrop-blur-xl"
           >
-            <h3 className="text-xl font-semibold text-zinc-50">{plan.name}</h3>
-            <p className="mt-4 text-3xl font-semibold text-zinc-50">
+            <h3 className="text-xl font-extrabold text-slate-950">{plan.name}</h3>
+            <p className="mt-4 text-3xl font-extrabold text-slate-950">
               {plan.price}
             </p>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">{plan.body}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{plan.body}</p>
 
             <div className="mt-6 space-y-3">
               {plan.features.map((feature) => (
-                <div key={feature} className="flex gap-3 text-sm text-zinc-300">
-                  <CheckCircle2 size={17} className="text-emerald-300" />
+                <div key={feature} className="flex gap-3 text-sm font-semibold text-slate-700">
+                  <CheckCircle2 size={17} className="text-emerald-600" />
                   {feature}
                 </div>
               ))}
